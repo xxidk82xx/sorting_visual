@@ -7,9 +7,10 @@ use self::glfw::{Context, Key, Action};
 extern crate gl;
 use self::gl::types::*;
 
-use std::ffi::CString;
 use std::ptr;
-use std::str;
+use std::io::prelude::*;
+use std::ffi::CString;
+use std::fs::File;
 use std::mem;
 use std::os::raw::c_void;
 
@@ -17,24 +18,9 @@ use std::os::raw::c_void;
 const SCR_WIDTH: u32 = 800;
 const SCR_HEIGHT: u32 = 600;
 
-const vertexShaderSource: &str = r#"
-    #version 330 core
-    layout (location = 0) in vec3 aPos;
-    void main() {
-       gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-    }
-"#;
-
-const fragmentShaderSource: &str = r#"
-    #version 330 core
-    out vec4 FragColor;
-    void main() {
-       FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-    }
-"#;
-
 #[allow(non_snake_case)]
 pub fn main() {
+
     // glfw: initialize and configure
     let mut glfw = glfw::init(error_callback).unwrap();
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -52,6 +38,7 @@ pub fn main() {
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
     let (shaderProgram, VAO) = unsafe {
+        let (fragmentShaderSource, vertexShaderSource) = read_shaders();
         // build and compile our shader program
         // vertex shader
         let vertexShader = gl::CreateShader(gl::VERTEX_SHADER);
@@ -75,10 +62,8 @@ pub fn main() {
         gl::DeleteShader(fragmentShader);
 
         // set up vertex data (and buffer(s)) and configure vertex attributes
-        // ------------------------------------------------------------------
-        // HINT: type annotation is crucial since default for float literals is f64
         let vertices: [f32; 9] = [
-            -0.5, -0.5, 0.0, // left
+            0.0, 0.0, 0.0, // left
              0.5, -0.5, 0.0, // right
              0.0,  0.5, 0.0  // top
         ];
@@ -153,3 +138,30 @@ fn process_events(window: &mut glfw::Window, events: &GlfwReceiver<(f64, glfw::W
 fn error_callback(err: glfw::Error, description: String) {
     println!("GLFW error {:?}: {:?}", err, description);
 }
+
+fn read_shaders() -> (CString, CString){
+    let mut fragment = File::open("fragment.glsl").expect("cannot find fragment shaders");
+    let mut verticies = File::open("vertecies.glsl").expect("cannot find vertex shaders");
+
+    let mut buf_fragment = Vec::new();
+    let mut buf_verticies = Vec::new();
+
+
+    let _ = fragment.read_to_end(&mut buf_fragment).expect("no fragment shaders");
+    let _ = verticies.read_to_end(&mut buf_verticies).expect("no vertex shaders");
+
+    unsafe {(CString::from_vec_unchecked(buf_fragment), CString::from_vec_unchecked(buf_verticies))}
+}
+
+//fn buildBars(array:Vec<i32>) -> Vec<f32>{
+//    let bars: Vec<f32> = Vec::new();
+//
+//    let width:usize = TryInto::<usize>::try_into(SCR_WIDTH).unwrap()/array.len();
+//    let gaps = width/3;
+//
+//    for i in array {
+//        bars.push(value)
+//    }
+//
+//    bars
+//}
