@@ -2,22 +2,27 @@
 mod sorting;
 
 extern crate glfw;
-use glfw::GlfwReceiver;
-
-use self::glfw::{Context, Key, Action};
+use glfw::{
+    Context, 
+    Key, 
+    Action,
+    GlfwReceiver
+};
 
 extern crate gl;
-use self::gl::types::*;
+use gl::types::*;
 
-use std::cmp;
-use std::sync::mpsc;
-use std::thread;
-use std::{ptr, usize};
-use std::io::prelude::*;
-use std::ffi::CString;
-use std::fs::File;
-use std::mem;
-use std::os::raw::c_void;
+use std::{cmp,
+    sync::mpsc,
+    thread,
+    ptr,
+    usize,
+    io::prelude::*,
+    ffi::CString,
+    fs::File,
+    mem,
+    os::raw::c_void
+};
 
 // settings
 const SCR_WIDTH: u32 = 800;
@@ -43,7 +48,17 @@ pub fn main() {
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
     let shaderProgram= unsafe {
-        let (fragmentShaderSource, vertexShaderSource) = read_shaders();
+        let (fragmentShaderSource, vertexShaderSource) = {
+            let mut buf_fragment = Vec::new();
+            let mut buf_verticies = Vec::new();
+
+            File::open("fragment.glsl").expect("cannot find fragment shaders")
+                .read_to_end(&mut buf_fragment).expect("no fragment shaders");
+            File::open("verteces.glsl").expect("cannot find vertex shaders")
+                .read_to_end(&mut buf_verticies).expect("no vertex shaders");
+                
+            (CString::from_vec_unchecked(buf_fragment), CString::from_vec_unchecked(buf_verticies))
+        };
         // build and compile our shader program
         // vertex shader
         let vertexShader = gl::CreateShader(gl::VERTEX_SHADER);
@@ -78,19 +93,18 @@ pub fn main() {
     let mut i = 1;
     let mut arr = Vec::new();
     // render loop
-    // -----------
     while !window.should_close() {
         // events
-        // -----
         process_events(&mut window, &events);
 
         // render
-        // ------
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
+
+            //code for bars
             arr = rax.try_recv().unwrap_or(arr);
-            i = rx.try_recv().unwrap_or(i);
+            i = rx.try_recv().unwrap_or(i); // TODO: add support for multiple pointers
             drawBars(&arr,shaderProgram, i);
             window.swap_buffers();
             glfw.poll_events();
@@ -108,7 +122,6 @@ pub fn main() {
     }
 }
 
-// NOTE: not the same version as in common.rs!
 fn process_events(window: &mut glfw::Window, events: &GlfwReceiver<(f64, glfw::WindowEvent)>) {
     for (_, event) in glfw::flush_messages(&events) {
         match event {
@@ -128,17 +141,7 @@ fn error_callback(err: glfw::Error, description: String) {
 }
 
 fn read_shaders() -> (CString, CString){
-    let mut fragment = File::open("fragment.glsl").expect("cannot find fragment shaders");
-    let mut verticies = File::open("vertecies.glsl").expect("cannot find vertex shaders");
-
-    let mut buf_fragment = Vec::new();
-    let mut buf_verticies = Vec::new();
-
-
-    let _ = fragment.read_to_end(&mut buf_fragment).expect("no fragment shaders");
-    let _ = verticies.read_to_end(&mut buf_verticies).expect("no vertex shaders");
-
-    unsafe {(CString::from_vec_unchecked(buf_fragment), CString::from_vec_unchecked(buf_verticies))}
+    
 }
 
 fn get_max(arr:&Vec<i32>) -> i32 {
