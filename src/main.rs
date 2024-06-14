@@ -32,7 +32,7 @@ const SCR_HEIGHT: u32 = 600;
 pub fn main() {
 
     // glfw: initialize and configure
-    let mut glfw = glfw::init(error_callback).unwrap();
+    let mut glfw = glfw::init( | err: glfw::Error, description: String | {println!("GLFW error {:?}: {:?}", err, description);}).unwrap();
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
 
@@ -91,7 +91,7 @@ pub fn main() {
 
     thread::spawn(move | | sorting::sort(tx, tax));
     let mut i = 1;
-    let mut arr = Vec::new();
+    let mut arr: Vec<u32> = Vec::new();
     // render loop
     while !window.should_close() {
         // events
@@ -136,11 +136,7 @@ fn process_events(window: &mut glfw::Window, events: &GlfwReceiver<(f64, glfw::W
     }
 }
 
-fn error_callback(err: glfw::Error, description: String) {
-    println!("GLFW error {:?}: {:?}", err, description);
-}
-
-fn get_max(arr:&Vec<i32>) -> i32 {
+fn get_max(arr:&Vec<u32>) -> u32 {
     let mut max = 0;
     for i in arr {
         max = cmp::max(max, *i);
@@ -149,7 +145,7 @@ fn get_max(arr:&Vec<i32>) -> i32 {
 }
 
 #[allow(non_snake_case)]
-unsafe fn drawBars(array: &Vec<i32>, shaderProgram:u32, arrPointer:usize) -> (){
+unsafe fn drawBars(array: &Vec<u32>, shaderProgram:u32, arrPointer:usize) -> (){
     
     let gaps = (1.0-1.0/array.len() as f32)/array.len() as f32;
     let width:f32 = 1.0/array.len() as f32;

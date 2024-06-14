@@ -4,8 +4,8 @@ use rand::thread_rng;
 use core::time;
 use std::thread;
 use std::sync::mpsc::Sender;
-pub fn sort(tx:Sender<usize>, tax:Sender<Vec<i32>>) {
-    let mut array: Vec<i32> = (1..10).collect();
+pub fn sort(tx:Sender<usize>, tax:Sender<Vec<u32>>) {
+    let mut array: Vec<u32> = (1..10).collect();
     array.shuffle(&mut thread_rng());
     let mut swapped;
     loop {
@@ -22,7 +22,7 @@ pub fn sort(tx:Sender<usize>, tax:Sender<Vec<i32>>) {
         }
     }
 }
-fn bubble_iter(arr: &mut Vec<i32>, i:usize) -> bool {
+fn bubble_iter(arr: &mut Vec<u32>, i:usize) -> bool {
 	if i == arr.len() {
 		false
 	} else {
