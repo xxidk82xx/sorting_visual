@@ -140,10 +140,6 @@ fn error_callback(err: glfw::Error, description: String) {
     println!("GLFW error {:?}: {:?}", err, description);
 }
 
-fn read_shaders() -> (CString, CString){
-    
-}
-
 fn get_max(arr:&Vec<i32>) -> i32 {
     let mut max = 0;
     for i in arr {
