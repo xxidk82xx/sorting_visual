@@ -12,16 +12,19 @@ use glfw::{
 extern crate gl;
 use gl::types::*;
 
-use std::{cmp,
-    sync::mpsc,
-    thread,
-    ptr,
-    usize,
+use std::{
+    cmp, 
+    ffi::CString, 
+    fs::File, 
     io::prelude::*,
-    ffi::CString,
-    fs::File,
-    mem,
-    os::raw::c_void
+     mem, 
+     os::raw::c_void, 
+     ptr, 
+     sync::mpsc::{self, 
+        Receiver, 
+        Sender}, 
+    thread, 
+    usize
 };
 
 // settings
@@ -88,10 +91,11 @@ pub fn main() {
     let (tx, rx) = mpsc::channel();
     let (tax, rax) = mpsc::channel();
 
-
-    thread::spawn(move | | sorting::sort(tx, tax));
+    
+    let mut arr: Vec<u16> = (1..10).collect();
+    let throwaway = arr.clone();
+    thread::spawn(move | | sorting::sort(throwaway, tx, tax));
     let mut i = 1;
-    let mut arr: Vec<u32> = Vec::new();
     // render loop
     while !window.should_close() {
         // events
@@ -136,27 +140,27 @@ fn process_events(window: &mut glfw::Window, events: &GlfwReceiver<(f64, glfw::W
     }
 }
 
-fn get_max(arr:&Vec<u32>) -> u32 {
-    let mut max = 0;
+fn get_max<T:Ord>(arr:&Vec<T>) -> &T {
+    let mut max = &arr[0];
     for i in arr {
-        max = cmp::max(max, *i);
+        max = cmp::max(max, i);
     }
     max
 }
 
 #[allow(non_snake_case)]
-unsafe fn drawBars(array: &Vec<u32>, shaderProgram:u32, arrPointer:usize) -> (){
+unsafe fn drawBars<T:Ord+Into<f32>+Copy>(arr: &Vec<T>, shaderProgram:u32, arrPointer:usize) -> (){
     
-    let gaps = (1.0-1.0/array.len() as f32)/array.len() as f32;
-    let width:f32 = 1.0/array.len() as f32;
+    let gaps = (1.0-1.0/arr.len() as f32)/arr.len() as f32;
+    let width:f32 = 1.0/arr.len() as f32;
     
-    let vStretch:f32 = 2.0*(1.0-gaps)/get_max(array) as f32;
+    let vStretch:f32 = 2.0*(1.0-gaps)/ <T as Into<f32>>::into(*get_max(arr));
     
     gl::UseProgram(shaderProgram);
-    let mut VAO = vec![0;array.len()];
-    for i in 0..array.len() {
+    let mut VAO = vec![0;arr.len()];
+    for i in 0..arr.len() {
         let bar_pos_x = i as f32 * width + (i as f32 + 1.0) * gaps;
-        let bar_height = array[i] as f32 * vStretch;
+        let bar_height = <T as Into<f32>>::into(arr[i]) * vStretch;
         let vertices: [f32;8] = [
             -1.0 + bar_pos_x,
             -1.0 + gaps,
