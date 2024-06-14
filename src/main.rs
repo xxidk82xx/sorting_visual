@@ -1,6 +1,7 @@
 #![allow(non_upper_case_globals)]
+mod sorting;
+
 extern crate glfw;
-use gl::STATIC_DRAW;
 use glfw::GlfwReceiver;
 
 use self::glfw::{Context, Key, Action};
@@ -8,15 +9,12 @@ use self::glfw::{Context, Key, Action};
 extern crate gl;
 use self::gl::types::*;
 
-use rand::seq::SliceRandom;
-use rand::thread_rng;
-use core::time;
-use std::cmp::{self, max};
-use std::sync::mpsc::{self, Sender};
+use std::cmp;
+use std::sync::mpsc;
 use std::thread;
 use std::{ptr, usize};
 use std::io::prelude::*;
-use std::ffi::{c_char, CString};
+use std::ffi::CString;
 use std::fs::File;
 use std::mem;
 use std::os::raw::c_void;
@@ -34,7 +32,7 @@ pub fn main() {
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
 
     // glfw window creation
-    let (mut window, events) = glfw.create_window(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", glfw::WindowMode::Windowed)
+    let (mut window, events) = glfw.create_window(SCR_WIDTH, SCR_HEIGHT, "sortingAlgs", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window");
 
     window.make_current();
@@ -76,7 +74,7 @@ pub fn main() {
     let (tax, rax) = mpsc::channel();
 
 
-    thread::spawn(move | | sort(tx, tax));
+    thread::spawn(move | | sorting::sort(tx, tax));
     let mut i = 1;
     let mut arr = Vec::new();
     // render loop
@@ -107,25 +105,6 @@ pub fn main() {
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
-    }
-}
-
-fn sort(tx:Sender<usize>, tax:Sender<Vec<i32>>) {
-    let mut array: Vec<i32> = (1..10).collect();
-    array.shuffle(&mut thread_rng());
-    let mut swapped = false;
-    loop {
-        swapped = false;
-        println!("test");
-        for i in 1..array.len() {
-            tx.send(i).unwrap_or(());
-            tax.send(array.clone()).unwrap_or(());
-            swapped = bubble_iter(&mut array, i) || swapped;
-            thread::sleep(time::Duration::from_secs_f32(0.1));
-        }
-        if !swapped {
-            return;
-        }
     }
 }
 
@@ -173,9 +152,6 @@ fn get_max(arr:&Vec<i32>) -> i32 {
 #[allow(non_snake_case)]
 unsafe fn drawBars(array: &Vec<i32>, shaderProgram:u32, arrPointer:usize) -> (){
     
-    let bottom_left_x:f32 = -1.0*SCR_WIDTH as f32/2.0;
-    let bottom_left_y:f32 = -1.0*SCR_HEIGHT as f32/2.0;
-    
     let gaps = (1.0-1.0/array.len() as f32)/array.len() as f32;
     let width:f32 = 1.0/array.len() as f32;
     
@@ -184,21 +160,21 @@ unsafe fn drawBars(array: &Vec<i32>, shaderProgram:u32, arrPointer:usize) -> (){
     gl::UseProgram(shaderProgram);
     let mut VAO = vec![0;array.len()];
     for i in 0..array.len() {
-        
+        let bar_pos_x = i as f32 * width + (i as f32 + 1.0) * gaps;
+        let bar_height = array[i] as f32 * vStretch;
         let vertices: [f32;8] = [
-            -1.0 + i as f32 * width + (i as f32 + 1.0) * gaps,
+            -1.0 + bar_pos_x,
             -1.0 + gaps,
-            -1.0 + i as f32 * width + (i as f32 + 1.0) * gaps + width,
+            -1.0 + bar_pos_x + width,
             -1.0 + gaps,
-            -1.0 + i as f32 * width + (i as f32 + 1.0) * gaps + width,
-            -1.0 + array[i] as f32 * vStretch + gaps,
-            -1.0 + i as f32 * width + (i as f32 + 1.0) * gaps,
-            -1.0 + array[i] as f32 * vStretch + gaps
-            ];
+            -1.0 + bar_pos_x + width,
+            -1.0 + bar_height + gaps,
+            -1.0 + bar_pos_x,
+            -1.0 + bar_height + gaps
+        ];
   
-            VAO[i] = createVAO(vertices, shaderProgram, 
-                if i == arrPointer {[1.0, 0.0, 0.0]} else {[1.0, 1.0, 1.0]});
-        }
+        VAO[i] = createVAO(vertices, if i == arrPointer {[1.0, 0.0, 0.0]} else {[1.0, 1.0, 1.0]});
+    }
 
     for i in VAO {
         gl::BindVertexArray(i);
@@ -207,16 +183,9 @@ unsafe fn drawBars(array: &Vec<i32>, shaderProgram:u32, arrPointer:usize) -> (){
 }
 
 #[allow(non_snake_case)]
-unsafe fn createVAO(vertices:[f32;8], shaderProgram:u32, color:[f32;3]) -> u32 {
+unsafe fn createVAO(vertices:[f32;8], color:[f32;3]) -> u32 {
     let (mut VAO, mut VBO) = (0, [0,0]);
     let colors:[f32;12] = [color[0], color[1], color[2], color[0], color[1], color[2], color[0], color[1], color[2], color[0], color[1], color[2]];
-    let input: &'_ str = "position";
-    let c_str = CString::new(input).unwrap();
-    let position = gl::GetAttribLocation(shaderProgram, c_str.as_ptr() as *mut c_char);
-
-    let input: &'_ str = "color";
-    let c_str = CString::new(input).unwrap();
-    let color = gl::GetAttribLocation(shaderProgram, c_str.as_ptr() as *mut c_char);
 
     gl::GenBuffers(2, &mut VBO[0]);
     gl::GenVertexArrays(1, &mut VAO);
@@ -243,20 +212,4 @@ unsafe fn createVAO(vertices:[f32;8], shaderProgram:u32, color:[f32;3]) -> u32 {
     gl::BindBuffer(gl::ARRAY_BUFFER, 0);
     gl::BindVertexArray(0 as u32);
     VAO
-}
-
-fn bubble_iter(arr: &mut Vec<i32>, i:usize) -> bool {
-    if i == arr.len() {
-        false
-    } else {
-        if arr[i-1] >= arr[i] {
-            let a = arr[i-1];
-            arr[i-1] = arr[i];
-            arr[i] = a;
-            true
-        }
-        else {
-            false
-        }
-    }
 }

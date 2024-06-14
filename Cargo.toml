@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 gl = "0.14.0"
-glfw = "0.56.0"
+glfw = "0.57.0"
 rand = "0.8.5"
