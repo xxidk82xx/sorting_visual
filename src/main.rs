@@ -20,9 +20,7 @@ use std::{
      mem, 
      os::raw::c_void, 
      ptr, 
-     sync::mpsc::{self, 
-        Receiver, 
-        Sender}, 
+     sync::mpsc, 
     thread, 
     usize
 };
