@@ -93,7 +93,7 @@ pub fn main() {
     let mut arr: Vec<u16> = (1..10).collect();
     let throwaway = arr.clone();
     thread::spawn(move | | sorting::sort(throwaway, tx, tax));
-    let mut i = 1;
+    let mut i = Vec::new();
     // render loop
     while !window.should_close() {
         // events
@@ -107,7 +107,7 @@ pub fn main() {
             //code for bars
             arr = rax.try_recv().unwrap_or(arr);
             i = rx.try_recv().unwrap_or(i); // TODO: add support for multiple pointers
-            drawBars(&arr,shaderProgram, i);
+            drawBars(&arr,shaderProgram, &i);
             window.swap_buffers();
             glfw.poll_events();
             // draw our first triangle
@@ -147,7 +147,7 @@ fn get_max<T:Ord>(arr:&Vec<T>) -> &T {
 }
 
 #[allow(non_snake_case)]
-unsafe fn drawBars<T:Ord+Into<f32>+Copy>(arr: &Vec<T>, shaderProgram:u32, arrPointer:usize) -> (){
+unsafe fn drawBars<T:Ord+Into<f32>+Copy>(arr: &Vec<T>, shaderProgram:u32, arrPointer:&Vec<usize>) -> (){
     
     let gaps = (1.0-1.0/arr.len() as f32)/arr.len() as f32;
     let width:f32 = 1.0/arr.len() as f32;
@@ -170,7 +170,7 @@ unsafe fn drawBars<T:Ord+Into<f32>+Copy>(arr: &Vec<T>, shaderProgram:u32, arrPoi
             -1.0 + bar_height + gaps
         ];
   
-        VAO[i] = createVAO(vertices, if i == arrPointer {[1.0, 0.0, 0.0]} else {[1.0, 1.0, 1.0]});
+        VAO[i] = createVAO(vertices, if arrPointer.contains(&i) {[1.0, 0.0, 0.0]} else {[1.0, 1.0, 1.0]});
     }
 
     for i in VAO {
