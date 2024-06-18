@@ -4,36 +4,43 @@ use rand::thread_rng;
 use core::time;
 use std::thread;
 use std::sync::mpsc::Sender;
-pub fn sort<T:Ord+Clone+Copy>(mut arr:Vec<T>, tx:Sender<Vec<usize>>, tax:Sender<Vec<T>>) {
-    //let mut array: Vec<u16> = (1..10).collect();
+pub fn sort<T:Ord+Clone>(mut arr:Vec<T>, tx:Sender<Vec<usize>>, tax:Sender<Vec<T>>) {
     arr.shuffle(&mut thread_rng());
     let mut swapped;
-    loop {
+    for i in 0..arr.len() - 1 {
         swapped = false;
-        for i in 1..arr.len() {
-            tx.send(vec![i, i-1]).unwrap_or(());
+        for j in 1..arr.len()-i {
+            tx.send(vec![j, j-1]).unwrap_or(());
             tax.send(arr.clone()).unwrap_or(());
-            swapped = bubble_iter(&mut arr, i) || swapped;
-            thread::sleep(time::Duration::from_secs_f32(0.1));
+            swapped = if i == arr.len() {
+                false
+            } else {
+                if arr[j-1] >= arr[j] {
+                    arr.swap(j-1, j);
+                    true
+                }
+                else {
+                    false
+                }
+            } || swapped;
+            thread::sleep(time::Duration::from_secs_f32(0.3));
         }
         if !swapped {
-            return;
+            break;
         }
     }
-}
-fn bubble_iter<T:Ord+Copy>(arr: &mut Vec<T>, i:usize) -> bool {
-	if i == arr.len() {
-		false
-	} else {
-		if arr[i-1] >= arr[i] {
-			let a = arr[i-1];
-			arr[i-1] = arr[i];
-			arr[i] = a;
-			true
-		}
-		else {
-			false
-		}
-	}
+    if verify_sorted(arr, tx, tax) == false {
+        println!("didnt sort properly");
+    } 
 }
 
+pub fn verify_sorted<T:Ord+Clone>(arr:Vec<T>, tx:Sender<Vec<usize>>, tax:Sender<Vec<T>>) ->bool {
+    let mut sorted = true;
+    for i in 1..arr.len() {
+        tx.send(vec![i]).unwrap_or(());
+        tax.send(arr.clone()).unwrap_or(());
+        sorted = sorted && arr[i-1] < arr[i];
+        thread::sleep(time::Duration::from_secs_f32(0.3))
+    }
+    sorted
+}
