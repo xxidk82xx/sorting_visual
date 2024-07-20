@@ -23,7 +23,7 @@ pub fn sort<T:Ord+Clone>(mut arr:Vec<T>, tx:Sender<Vec<usize>>, tax:Sender<Vec<T
                     false
                 }
             } || swapped;
-            thread::sleep(time::Duration::from_secs_f32(0.3));
+            thread::sleep(time::Duration::from_secs_f32(0.001));
         }
         if !swapped {
             break;
@@ -40,7 +40,7 @@ pub fn verify_sorted<T:Ord+Clone>(arr:Vec<T>, tx:Sender<Vec<usize>>, tax:Sender<
         tx.send(vec![i]).unwrap_or(());
         tax.send(arr.clone()).unwrap_or(());
         sorted = sorted && arr[i-1] < arr[i];
-        thread::sleep(time::Duration::from_secs_f32(0.3))
+        thread::sleep(time::Duration::from_secs_f32(0.001))
     }
     sorted
 }
